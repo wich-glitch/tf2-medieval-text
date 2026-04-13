@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medieval AutoRP Translator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Almendra&display=swap');
+
+        body {
+            background-color: #1a0f00;
+            background-image: url('https://www.transparenttextures.com/patterns/dark-leather.png');
+            color: #3e2723;
+            font-family: 'Almendra', serif;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0;
+        }
+
+        .scroll {
+            background: #f4e4bc;
+            background-image: url('https://www.transparenttextures.com/patterns/parchment.png');
+            padding: 40px;
+            border-radius: 5px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+            border: 2px solid #3e2723;
+            max-width: 700px; width: 90%;
+            text-align: center;
+        }
+
+        h1 { font-family: 'MedievalSharp', cursive; font-size: 2.5rem; margin-bottom: 20px; border-bottom: 2px solid #3e2723; }
+
+        textarea {
+            width: 100%; height: 100px; padding: 15px;
+            border: 1px solid #8d6e63; background: rgba(255, 255, 255, 0.2);
+            font-family: 'Almendra', serif; font-size: 1.2rem;
+            box-sizing: border-box; resize: none; margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #4e342e; color: #f4e4bc;
+            padding: 12px 25px; border: none;
+            font-family: 'MedievalSharp', cursive; font-size: 1.2rem;
+            cursor: pointer; margin: 10px 0;
+        }
+
+        button:hover { background-color: #2c1b0e; }
+
+        .output-label { display: block; text-align: left; font-weight: bold; margin-top: 20px; }
+
+        .output-area { 
+            background: rgba(0,0,0,0.05); 
+            border-left: 5px solid #4e342e; 
+            padding: 15px; 
+            text-align: left; 
+            min-height: 60px; 
+            font-style: italic;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+<div class="scroll">
+    <h1>Ye Olde Auto-RP</h1>
+    
+    <textarea id="inputBox" placeholder="Enter thy modern speech..."></textarea>
+    <button onclick="translateNow()">Transmute Speech</button>
+
+    <b class="output-label">Medieval Script:</b>
+    <div id="outputArea" class="output-area">Thy translation shall appear here...</div>
+    <button style="font-size: 0.8rem;" onclick="copyOutput()">Copy to Clipboard</button>
+</div>
+
+<script>
+// DATA FROM AUTORP.TXT
+const lists = {
+    god: ["Odin", "Zeus", "Thor", "Crom", "Cugel", "Poseidon", "Saint Mary", "Loki", "Erlik", "Cthulhu", "Buddha", "Aphrodite", "Isis", "Kali", "Dionysus", "Hermes", "Venus", "Hephaestus", "Bacchus", "Xerxes", "Minos", "Artemis", "Hecate"],
+    godadj: ["Almighty", "Unknowable", "All-knowing", "Lecherous", "Scandalous", "Merciful", "Wrathful", "Vengeful", "Wise", "Warlike", "Crafty", "Bloodthirsty", "Ruinous", "Omnipotent", "Grim"],
+    bodypart: ["Beard", "Third Leg", "Scalp", "Eye", "Thigh", "Arm", "Sword", "Heel", "Tongue", "Hammer", "Liver", "Spleen", "Gall"],
+    bodyadj: ["Unknowable", "Righteous", "Hairy", "Awe-inspiring", "Toothy", "Ravaged", "Aged", "Endless", "Pestilent", "Forgotten", "Beautiful", "Prophetic", "Bleak", "Infinite", "Ancient", "Venerable", "Noxious", "Sacriligious"],
+    insult_adj: ["artless", "droning", "fawning", "warped", "paunchy", "puny", "spongy", "ruttish", "vain", "lumpish", "craven", "witless", "pustulent", "scurvy", "fetid", "vile", "mewling", "rank", "moonish", "brutish", "surly", "tottering", "villainous", "churlish", "tickle-brained"],
+    insult_noun: ["mongrel", "codpiece", "jackanape", "coxcomb", "harlot", "cur", "clot", "barnacle", "harpy", "wench", "churl", "pleb", "taffer", "scoundrel", "rapscallion", "tosspot", "knave", "boil", "varlet", "bladder"]
+};
+
+const prefixes = [
+    "Forsooth, ", "I say, ", "I sayeth, ", "Hark! ", "Harketh! ", "Avast, ", "Zounds, ", "Perchance, ", "Pray tell, ", "Prithee, ", "What ho, ", "Pray, ", "Alas, ", "In truth, ", "By my faith, ", "S'wounds, ", "By &god, ", "By the Will of &godadj &god, ", "By the &bodyadj &bodypart of the &godadj &god, ", "By &godadj &god's &bodyadj &bodypart, ", "&god's &bodypart, ", "I warrant "
+];
+
+const suffixes = ["Anon!", "Hum.", "Good sir!", "Good sire!", "Milady!", "My Liege!", "Guvnor!", "Indeed.", "Godspeed!"];
+
+const dictionary = [
+    { keys: ["it is", "it's"], val: "'tis" },
+    { keys: ["it was"], val: "'twas" },
+    { keys: ["it would"], val: "'twould" },
+    { keys: ["it will"], val: "'twill" },
+    { keys: ["shall not", "will not"], val: "shan't" },
+    { keys: ["over there"], val: "yonder" },
+    { keys: ["in the"], val: "i' the" },
+    { keys: ["thank you", "thanks"], val: ["thankee", "grammercy to you", "many good thanks"] },
+    { keys: ["you", "u"], val: ["thou", "thee", "ye"] },
+    { keys: ["are"], val: "art" },
+    { keys: ["killed", "beaten"], val: ["slain", "vanquished", "brung low"] },
+    { keys: ["hello", "hi"], val: ["well met", "tally ho", "ave"] },
+    { keys: ["your"], val: ["thy", "thine"] },
+    { keys: ["my"], val: "mine" },
+    { keys: ["afk"], val: ["away, fighting kobolds", "aft, frisking knickers"] },
+    { keys: ["spy"], plural: "spies", val: "cutpurse", valP: "cutpurses" },
+    { keys: ["soldier"], plural: "soldiers", val: "mercenary", valP: "mercenaries" },
+    { keys: ["medic"], plural: "medics", val: "leech", valP: "leeches" },
+    { keys: ["sniper"], plural: "snipers", val: "archer", valP: "archers" },
+    { keys: ["haha", "hehe", "heh", "hah"], val: ["guffaw!", "zounds!", "and there was much mirth!"] },
+    { keys: ["later"], val: "anon" },
+    { keys: ["why"], val: "wherefore" },
+    { keys: ["shit"], val: "nightsoil" },
+    { keys: ["is"], val: "be" }
+];
+
+function getRandom(arr) {
+    if (!arr) return "";
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function resolvePlaceholders(str) {
+    return str.replace(/&godadj/g, () => getRandom(lists.godadj))
+              .replace(/&god/g, () => getRandom(lists.god))
+              .replace(/&bodyadj/g, () => getRandom(lists.bodyadj))
+              .replace(/&bodypart/g, () => getRandom(lists.bodypart));
+}
+
+function translateNow() {
+    try {
+        let input = document.getElementById('inputBox').value;
+        if (!input.trim()) return;
+        
+        let text = input.toLowerCase();
+
+        // 1. Process Insults
+        const insultRegex = /\b(idiot|fool|bastard|idiots|fools|bastards)\b/g;
+        text = text.replace(insultRegex, (match) => {
+            const a1 = getRandom(lists.insult_adj);
+            const a2 = getRandom(lists.insult_adj);
+            const n = getRandom(lists.insult_noun);
+            return match.endsWith('s') ? `${a1}, ${a2} ${n}s` : `${a1}, ${a2} ${n}`;
+        });
+
+        // 2. Dictionary Replacements
+        dictionary.forEach(item => {
+            item.keys.forEach(key => {
+                // Handle plurals
+                if (item.plural) {
+                    const pRegex = new RegExp("\\b" + item.plural + "\\b", "gi");
+                    text = text.replace(pRegex, Array.isArray(item.valP) ? getRandom(item.valP) : item.valP);
+                }
+                // Handle singular (Escape apostrophes for regex)
+                const safeKey = key.replace(/'/g, "'");
+                const sRegex = new RegExp("\\b" + safeKey + "\\b", "gi");
+                text = text.replace(sRegex, Array.isArray(item.val) ? getRandom(item.val) : item.val);
+            });
+        });
+
+        // 3. Punctuation
+        text = text.replace(/!/g, () => getRandom([" ,verily!", "! Huzzah!", "! What-ho!", ", indeed!"]));
+        text = text.replace(/\?/g, () => getRandom([", I wonder?", ", what say thee?", ", pray tell?"]));
+
+        // 4. Prefix & Suffix
+        let finalPrefix = (Math.random() > 0.5) ? resolvePlaceholders(getRandom(prefixes)) : "";
+        let finalSuffix = (Math.random() > 0.5) ? " " + getRandom(suffixes) : "";
+
+        // Anti-Double-Anon
+        if (text.includes("anon") && finalSuffix.includes("Anon")) finalSuffix = " Good sir!";
+
+        document.getElementById('outputArea').innerText = finalPrefix + text.trim() + finalSuffix;
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById('outputArea').innerText = "An error occurred in the script. Check Console (F12).";
+    }
+}
+
+function copyOutput() {
+    const text = document.getElementById('outputArea').innerText;
+    navigator.clipboard.writeText(text);
+}
+</script>
+
+</body>
+</html>
