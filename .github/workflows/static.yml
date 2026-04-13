@@ -1,4 +1,4 @@
-name: Deploy Medieval Translator to Pages
+name: Deploy Medieval Translator
 
 on:
   push:
@@ -12,16 +12,15 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true # Changed to true to clear old artifacts on new push
 
 jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps: deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     
-    # This env section fixes the Node.js 20 deprecation warning
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
@@ -32,12 +31,12 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      # This is the only upload step you should have
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload the entire repository (since it's just your HTML file)
-          path: '.'
+          path: '.' # Uploads index.html from your root folder
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v4 # Use v4 for stability with upload-pages-artifact@v3
